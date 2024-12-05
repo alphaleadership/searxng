@@ -80,12 +80,10 @@ def init(cfg: "FaviconCacheConfig"):
                 "Disable favicon caching completely: SQLite library (%s) is too old! (require >= 3.35)",
                 sqlite3.sqlite_version,
             )
-            CACHE = FaviconCacheNull(cfg)
         else:
-            CACHE = FaviconCacheSQLite(cfg)
+            pass
     elif cfg.db_type == "mem":
         logger.error("Favicons are cached in memory, don't use this in production!")
-        CACHE = FaviconCacheMEM(cfg)
     else:
         raise NotImplementedError(f"favicons db_type '{cfg.db_type}' is unknown")
 
@@ -382,7 +380,7 @@ CREATE TABLE IF NOT EXISTS blob_map (
 
             # drop items not in HOLD time
             res = conn.execute(
-                f"DELETE FROM blob_map"
+                "DELETE FROM blob_map"
                 f" WHERE cast(m_time as integer) < cast(strftime('%s', 'now') as integer) - {self.cfg.HOLD_TIME}"
             )
             logger.debug("dropped %s obsolete blob_map items from db", res.rowcount)
@@ -403,8 +401,8 @@ CREATE TABLE IF NOT EXISTS blob_map (
                     if c > x:
                         break
                 if sha_list:
-                    conn.execute("DELETE FROM blobs WHERE sha256 IN ('%s')" % "','".join(sha_list))
-                    conn.execute("DELETE FROM blob_map WHERE sha256 IN ('%s')" % "','".join(sha_list))
+                    conn.execute("DELETE FROM blobs WHERE sha256 IN (?)", ("','".join(sha_list), ))
+                    conn.execute("DELETE FROM blob_map WHERE sha256 IN (?)", ("','".join(sha_list), ))
                     logger.debug("dropped %s blobs with total size of %s bytes", len(sha_list), c)
 
     def _query_val(self, sql, default=None):
